@@ -1,0 +1,769 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'reset_password_screen.dart';
+import 'role_selection_page.dart';
+import 'dashboard_router.dart';
+import '../../utils/user_role.dart';
+import '../../../disable/unable_account_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
+  final TextEditingController emailCtrl = TextEditingController();
+  final TextEditingController passCtrl = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  bool _obscureText = true;
+  bool _loading = false;
+  bool _oauthInProgress = false; // Prevent multiple OAuth attempts
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    emailCtrl.dispose();
+    passCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // App came back to foreground - check if OAuth completed
+      print('🔄 App resumed, checking for OAuth completion...');
+      _checkForOAuthCompletion();
+    }
+  }
+
+  // Check if OAuth completed while user was away
+  void _checkForOAuthCompletion() {
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    if (currentUser != null && mounted) {
+      print('🎉 CACHED OAUTH DETECTED ON APP RESUME!');
+      print('🎉 User: ${currentUser.email}');
+      print('🚀 Handling cached OAuth session from app resume');
+
+      // Handle cached OAuth session immediately instead of waiting
+      _handleSuccessfulLogin(currentUser);
+    }
+  }
+
+  // Handles email/password sign-in and user role check.
+  Future<void> _loginUser() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _loading = true);
+
+    final email = emailCtrl.text.trim();
+    final password = passCtrl.text.trim();
+
+    try {
+      final AuthResponse res = await Supabase.instance.client.auth
+          .signInWithPassword(email: email, password: password);
+
+      if (res.user != null) {
+        print('✅ Email login successful for user: ${res.user!.email}');
+        print('✅ User ID: ${res.user!.id}');
+
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Login successful!')));
+        }
+
+        // Wait a moment for the auth state to propagate
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        // Verify the user is still authenticated
+        final currentUser = Supabase.instance.client.auth.currentUser;
+        print('🔍 Current user after login: ${currentUser?.email}');
+
+        if (currentUser == null) {
+          print('❌ User lost after login - this should not happen');
+        } else {
+          print(
+            '✅ User authentication confirmed, checking profile and redirecting',
+          );
+
+          // Wait a bit more for success message to be visible
+          await Future.delayed(const Duration(milliseconds: 1500));
+
+          // Manually check user profile and redirect
+          if (mounted) {
+            await _handleSuccessfulLogin(currentUser);
+          }
+        }
+      } else {
+        print('❌ Login failed: No user returned');
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("login_failed".tr())));
+        }
+      }
+    } on AuthException catch (e) {
+      print('❌ Login AuthException: ${e.message}');
+
+      // Check if this might be an OAuth user trying to use email/password
+      if (e.message.contains('Invalid login credentials') ||
+          e.message.contains('Email not confirmed')) {
+        await _handlePossibleOAuthUser(email);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(e.message)));
+        }
+      }
+    } catch (e) {
+      print('❌ Login Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("login_failed".tr())));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // New addition: Handles social sign-in with a provider (e.g., Google, Facebook)
+  Future<void> _signInWithProvider(OAuthProvider provider) async {
+    if (_oauthInProgress) {
+      print('  OAuth already in progress, ignoring duplicate request');
+      return;
+    }
+
+    print(' 🚀 Starting OAuth flow for provider: $provider');
+    setState(() {
+      _loading = true;
+      _oauthInProgress = true;
+    });
+    try {
+      // Initiates the OAuth sign-in flow
+      await Supabase.instance.client.auth.signInWithOAuth(
+        provider,
+        // The URL where your app will receive the authentication callback
+        redirectTo: 'com.login.app://login-callback',
+      );
+
+      // Success! OAuth flow initiated
+      print('🔐 OAuth flow initiated successfully');
+      print('🔐 Redirect URI: com.login.app://login-callback');
+
+      // CRITICAL FIX: Check if OAuth completed immediately (cached session)
+      await Future.delayed(const Duration(milliseconds: 500));
+      final immediateUser = Supabase.instance.client.auth.currentUser;
+
+      if (immediateUser != null) {
+        print('🎯 CACHED OAUTH DETECTED: User session returned immediately');
+        print('🎯 User: ${immediateUser.email}');
+
+        // OAuth session was cached and returned immediately
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _oauthInProgress = false;
+          });
+          print('🚀 Handling cached OAuth session immediately');
+          await _handleSuccessfulLogin(immediateUser);
+        }
+        return;
+      }
+
+      print(
+        '🔐 OAuth requires user interaction, starting callback detection...',
+      );
+      // Start aggressive checking for OAuth callback completion
+      _startOAuthCallbackDetection();
+    } on AuthException catch (e) {
+      print('❌ OAuth AuthException: ${e.message}');
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _oauthInProgress = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Social login failed: ${e.message}")),
+        );
+      }
+    } catch (e) {
+      print('❌ OAuth Error: $e');
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _oauthInProgress = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Social login failed: ${e.toString()}")),
+        );
+      }
+    }
+  }
+
+  // Aggressively check for OAuth callback completion
+  void _startOAuthCallbackDetection() {
+    Timer.periodic(const Duration(milliseconds: 200), (timer) {
+      final currentUser = Supabase.instance.client.auth.currentUser;
+
+      if (currentUser != null) {
+        print(
+          '🎉 OAuth callback completed! User authenticated: ${currentUser.email}',
+        );
+        timer.cancel();
+
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _oauthInProgress = false;
+          });
+
+          // CRITICAL FIX: Don't just wait for main.dart - handle navigation directly
+          print('🚀 OAuth callback detected, handling navigation immediately');
+          _handleSuccessfulLogin(currentUser);
+        }
+      } else if (timer.tick > 150) {
+        // Stop after 30 seconds (150 * 200ms)
+        print('⏰ OAuth callback timeout - stopping detection');
+        timer.cancel();
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _oauthInProgress = false;
+          });
+        }
+      }
+    });
+  }
+
+  // Handle successful login by checking profile and redirecting appropriately
+  Future<void> _handleSuccessfulLogin(User user) async {
+
+
+    // --- START OF FIX ---
+    // 2. ADD THIS CODE
+    // Save the user ID for the background service
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('current_user_id', user.id);
+      print('✅ Saved current_user_id to SharedPreferences for background service.');
+    } catch (e) {
+      print('❌ Failed to save user_id to SharedPreferences: $e');
+    }
+    // --- END OF FIX ---
+
+
+
+    try {
+      print(
+        '🔍 Checking user profile after successful login for: ${user.email}',
+      );
+
+      // Check if user profile exists and is complete
+      final userProfile = await Supabase.instance.client
+          .from('user_profiles')
+          .select(
+        'role, account_disable, profile_completed, name, custom_user_id, user_id, email',
+      )
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (userProfile == null) {
+        // New user - redirect to role selection
+        print('🆕 No profile found, redirecting to role selection');
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const RoleSelectionPage()),
+          );
+        }
+      } else {
+        // Existing user - check account status
+        final isDisabled = userProfile['account_disable'] as bool? ?? false;
+
+        if (isDisabled) {
+          print('🚫 Account disabled, redirecting to unable account page');
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) =>
+                    UnableAccountPage(userProfile: userProfile),
+              ),
+            );
+          }
+          return;
+        }
+
+        // Check if profile is completed
+        final isProfileCompleted =
+            userProfile['profile_completed'] as bool? ?? false;
+        final role = userProfile['role'];
+
+        if (!isProfileCompleted || role == null) {
+          print('⚠️ Incomplete profile, redirecting to role selection');
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => const RoleSelectionPage(),
+              ),
+            );
+          }
+        } else {
+          print('✅ Complete profile found, redirecting to dashboard');
+          final userRole = UserRoleExtension.fromDbValue(role);
+          if (userRole != null && mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => DashboardRouter(role: userRole),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      print('❌ Error handling successful login: $e');
+      // Fallback - show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Login successful but navigation failed. Please restart the app.',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  // Check if user exists in database (might be OAuth user)
+  Future<void> _handlePossibleOAuthUser(String email) async {
+    try {
+      // Check if email exists in user_profiles (OAuth user)
+      final existingUser = await Supabase.instance.client
+          .from('user_profiles')
+          .select('email, user_id')
+          .eq('email', email)
+          .maybeSingle();
+
+      if (existingUser != null) {
+        // User exists in database - likely OAuth user
+        print('👤 Email found in database - likely OAuth user');
+        _showOAuthRequiredDialog();
+      } else {
+        // User doesn't exist - show generic error
+        print('❌ Email not found in database - invalid credentials');
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Invalid email or password")));
+        }
+      }
+    } catch (e) {
+      print('❌ Error checking OAuth user: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("login_failed".tr())));
+      }
+    }
+  }
+
+  // Show dialog guiding user to use Google OAuth
+  void _showOAuthRequiredDialog() {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Use Google Sign-In"),
+        content: const Text(
+          "This email is linked to Google sign-in. "
+              "Please use 'Continue with Google' to access your account.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _signInWithProvider(OAuthProvider.google);
+            },
+            child: const Text("Sign in with Google"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String label, IconData prefixIcon) {
+    return InputDecoration(
+      filled: true,
+      //fillColor: Colors.teal.shade50,
+      labelText: label,
+      prefixIcon: Icon(prefixIcon, color: Colors.teal.shade700),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.teal.shade700, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+      ),
+    );
+  }
+
+  // Language dialog
+  void _showLanguageDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('chooseLanguage'.tr()),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text('English'.tr()),
+              onTap: () {
+                context.setLocale(const Locale('en'));
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: Text("हिंदी".tr()),
+              onTap: () {
+                context.setLocale(const Locale('hi'));
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      body: SafeArea(
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF009688), Color(0xFF26D0CE), Color(0xFF00675b)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Stack(
+            children: [
+              Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 24,
+                  ),
+                  child: Material(
+                    elevation: 12,
+                    borderRadius: BorderRadius.circular(28),
+                    shadowColor: Colors.black26,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 28,
+                        vertical: 38,
+                      ),
+                      decoration: BoxDecoration(
+                        //color: Colors.white,
+                        color: Theme.of(context).cardColor,
+
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(height: 8),
+                            /*const Icon(
+                              Icons.lock,
+                              size: 80,
+                              color: Color(0xFF00796B),
+                            ),*/
+                            Image.asset(
+                              'assets/TruckSinghbgr.png',
+                              width: 110,
+                              height: 110,
+                              //color: Color(0xFF00796B),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              "welcome_back".tr(),
+                              style: TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF00796B),
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              "sign_in_to_continue".tr(),
+                              style: TextStyle(
+                                fontSize: 16,
+                                //color: Colors.black54,
+                                color: Theme.of(
+                                  context,
+                                ).textTheme.headlineMedium?.color,
+                                fontWeight: FontWeight.w400,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+
+                            // Email Input
+                            TextFormField(
+                              controller: emailCtrl,
+                              enabled: !_loading,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: _inputDecoration(
+                                "email".tr(),
+                                Icons.email_outlined,
+                              ),
+                              validator: (val) =>
+                              val == null || !val.contains('@')
+                                  ? 'enter_valid_email'.tr()
+                                  : null,
+                            ),
+                            const SizedBox(height: 22),
+
+                            // Password Input and Forgot Password aligned right
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TextFormField(
+                                  controller: passCtrl,
+                                  enabled: !_loading,
+                                  obscureText: _obscureText,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    //color: Colors.black87,
+                                  ),
+                                  decoration:
+                                  _inputDecoration(
+                                    "password".tr(),
+                                    Icons.lock_outline,
+                                  ).copyWith(
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _obscureText
+                                            ? Icons.visibility
+                                            : Icons.visibility_off,
+                                        color: Colors.teal.shade700,
+                                      ),
+                                      onPressed: () => setState(
+                                            () => _obscureText = !_obscureText,
+                                      ),
+                                    ),
+                                  ),
+                                  validator: (val) {
+                                    if (val == null || val.isEmpty) {
+                                      return 'please_enter_password'.tr();
+                                    }
+                                    if (val.length < 8) {
+                                      return 'min_password'.tr();
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 6),
+                                // New addition: "Forgot Password?" button with navigation
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      // Navigates to the ResetPasswordRequestPage
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                          const ResetPasswordRequestPage(),
+                                        ),
+                                      );
+                                    },
+                                    child: Text(
+                                      "forgot_password".tr(),
+                                      style: TextStyle(
+                                        color: Colors.teal,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 32),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: FilledButton(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFF00796B),
+                                  foregroundColor: Colors.white,
+                                  textStyle: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                onPressed: _loading ? null : _loginUser,
+                                child: _loading
+                                    ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                                    : Text("log_in".tr()),
+                              ),
+                            ),
+
+                            const SizedBox(height: 24),
+                            TextButton(
+                              onPressed: _loading
+                                  ? null
+                                  : () {
+                                // This navigation is from your original code.
+                                // It leads to a role selection page before registration.
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                    const RoleSelectionPage(),
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                "dont_have_account".tr(),
+                                style: TextStyle(
+                                  color: Colors.teal.shade800,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Divider(
+                                    thickness: 1,
+                                    color: Colors.teal.shade400,
+                                    endIndent: 12,
+                                  ),
+                                ),
+                                Text(
+                                  "or_continue_with".tr(),
+                                  style: TextStyle(
+                                    color: Colors.teal.shade600,
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Divider(
+                                    thickness: 1,
+                                    color: Colors.teal.shade400,
+                                    indent: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Social sign-in button
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Google Sign-In Button
+                                SizedBox(
+                                  width: 56,
+                                  height: 56,
+                                  child: OutlinedButton(
+                                    style: OutlinedButton.styleFrom(
+                                      padding: EdgeInsets.zero,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      side: BorderSide(
+                                        color: Colors.grey.shade300,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    onPressed: _loading
+                                        ? null
+                                        : () => _signInWithProvider(
+                                      OAuthProvider.google,
+                                    ),
+                                    child: const Icon(
+                                      Icons.g_mobiledata,
+                                      size: 32,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 28),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 100,
+                right: 60,
+                child: SafeArea(
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.translate_outlined,
+                      size: 28,
+                    ),
+                    onPressed: () => _showLanguageDialog(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

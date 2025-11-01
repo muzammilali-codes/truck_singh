@@ -1,0 +1,80 @@
+name: logistics_toolkit
+description: "A new Flutter project."
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_dotenv: ^6.0.0
+  onesignal_flutter: ^5.2.0
+  google_fonts: ^6.2.1
+  supabase_flutter: ^2.5.6
+  flutter_rating_bar: ^4.0.1
+  intl: ^0.20.2
+  flutter_bloc: ^9.1.1
+  file_picker: ^10.3.3
+  image_picker: ^1.1.2
+  uuid: ^4.4.0
+  pdf: ^3.11.0
+  printing: ^5.12.0
+  email_validator: ^3.0.0
+  pull_to_refresh: ^2.0.0
+  equatable: ^2.0.5
+  flutter_slidable: ^4.0.1
+  flutter_animate: ^4.5.0
+  encrypt: ^5.0.3
+  flutter_background_service: ^5.0.5
+  flutter_local_notifications: ^19.4.2
+  google_maps_flutter: ^2.6.1
+  flutter_pdfview: ^1.3.2
+  shimmer: ^3.0.0
+  http: ^1.2.1
+  geolocator: ^14.0.2
+  connectivity_plus: ^7.0.0
+  sqflite: ^2.3.3
+  permission_handler: ^12.0.1
+  slide_to_act: ^2.0.2
+  timeago: ^3.6.1
+  flutter_polyline_points: ^3.1.0
+  signature: ^6.3.0
+  provider: ^6.1.2
+  shared_preferences: ^2.2.3
+  share_plus: ^12.0.0
+  easy_localization: ^3.0.5
+  pdfx: ^2.9.2
+  fl_chart: ^0.71.0
+  
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.14.4
+  
+
+flutter_icons:
+  image_path: "assets/appstore.png"
+  ios: true
+  android: true
+  adaptive_icon_foreground: "assets/appstore.png"
+  flutter_lints: ^5.0.0
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/translations/en.json
+    - assets/translations/hi.json
+    - .env
+    - assets/address.json
+    - assets/company_address.json
+    - assets/truck.png
+    - assets/cargo-truck.png
+    - assets/TruckSinghbgr.png
+    - assets/TruckSingh.jpeg
+    - assets/appstore.png

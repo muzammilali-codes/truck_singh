@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "921086172101",
+    "project_id": "truck-singh-20b19",
+    "storage_bucket": "truck-singh-20b19.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:921086172101:android:c8ef160d972ad1706e49ac",
+        "android_client_info": {
+          "package_name": "com.example.drivedb"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCk52yAd4In2HrnzJYW26JV2nxbl104qyk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:921086172101:android:2efbb21ded1de0016e49ac",
+        "android_client_info": {
+          "package_name": "com.example.logistics_toolkit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCk52yAd4In2HrnzJYW26JV2nxbl104qyk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:921086172101:android:a5d8fd6036be76926e49ac",
+        "android_client_info": {
+          "package_name": "com.example.rolepicker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCk52yAd4In2HrnzJYW26JV2nxbl104qyk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
