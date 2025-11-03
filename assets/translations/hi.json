@@ -756,7 +756,7 @@
   "driver_removed": "ड्राइवर सफलतापूर्वक हटाया गया",
   "error_deleting_driver": "ड्राइवर हटाने में त्रुटि: {error}",
   "manage_drivers": "अपने ड्राइवर प्रबंधित करें",
-  "enter_driver_id_mobile": "ड्राइवर आईडी या मोबाइल नंबर दर्ज करें",
+  "enter_driver_id_mobile": "ड्राइवर आईडी दर्ज करें",
   "add_driver": "ड्राइवर जोड़ें",
   "your_added_drivers": "आपके जोड़े गए ड्राइवर",
   "no_drivers_added": "अभी तक कोई ड्राइवर नहीं जोड़ा गया।",

@@ -756,7 +756,7 @@
   "driver_removed": "Driver removed successfully",
   "error_deleting_driver": "Error deleting driver: {error}",
   "manage_drivers": "Manage Your Drivers",
-  "enter_driver_id_mobile": "Enter Driver ID or Mobile Number",
+  "enter_driver_id_mobile": "Enter Driver ID",
   "add_driver": "Add Driver",
   "your_added_drivers": "Your Added Drivers",
   "no_drivers_added": "No drivers added yet.",
