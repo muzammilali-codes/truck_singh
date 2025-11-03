@@ -8,6 +8,7 @@ import 'dashboard_router.dart';
 import '../../utils/user_role.dart';
 import '../../../disable/unable_account_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart'; // <-- 1. IMPORT IS NEEDED
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -278,7 +279,7 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
       final userProfile = await Supabase.instance.client
           .from('user_profiles')
           .select(
-        'role, account_disable, profile_completed, name, custom_user_id, user_id, email',
+        'role, account_disable, profile_completed, custom_user_id', // <-- 2. GET custom_user_id
       )
           .eq('user_id', user.id)
           .maybeSingle();
@@ -312,6 +313,7 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
         final isProfileCompleted =
             userProfile['profile_completed'] as bool? ?? false;
         final role = userProfile['role'];
+        final customUserId = userProfile['custom_user_id'] as String?; // <-- 3. STORE custom_user_id
 
         if (!isProfileCompleted || role == null) {
           print('⚠️ Incomplete profile, redirecting to role selection');
@@ -324,6 +326,14 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
           }
         } else {
           print('✅ Complete profile found, redirecting to dashboard');
+          // --- 4. THIS IS THE CRITICAL ONESIGNAL FIX ---
+          if (customUserId != null) {
+            OneSignal.login(customUserId);
+            print('✅ OneSignal user logged in with external ID: $customUserId');
+          } else {
+            print('❌ OneSignal login skipped: custom_user_id is null');
+          }
+          // --- END OF FIX ---
           final userRole = UserRoleExtension.fromDbValue(role);
           if (userRole != null && mounted) {
             Navigator.of(context).pushReplacement(

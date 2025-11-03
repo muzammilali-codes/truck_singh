@@ -4,11 +4,16 @@ import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'encryption_service.dart';
+import 'package:flutter/foundation.dart'; // <-- 1. ADDED THIS IMPORT
+
 
 class ChatService {
   final SupabaseClient _client = Supabase.instance.client;
   final _unreadCountController = StreamController<int>.broadcast();
   RealtimeChannel? _messagesChannel;
+
+  // --- 2. ADDED A CACHE FOR THE USER PROFILE ---
+  Map<String, String?>? _currentUserProfile;
 
   ChatService() {
     _initializeMessagesSubscription();
@@ -35,6 +40,36 @@ class ChatService {
     }
   }
 
+
+
+  // --- 3. ADDED THIS NEW HELPER FUNCTION ---
+  /// Fetches the current user's ID and Name, caching it.
+  Future<Map<String, String?>> _getCurrentUserProfile() async {
+    // If cache exists, return it
+    if (_currentUserProfile != null) {
+      return _currentUserProfile!;
+    }
+    // If cache is empty, fetch profile
+    try {
+      final response = await _client
+          .from('user_profiles')
+          .select('custom_user_id, name')
+          .eq('user_id', _client.auth.currentUser!.id)
+          .single();
+
+      _currentUserProfile = {
+        'custom_user_id': response['custom_user_id'] as String?,
+        'name': response['name'] as String?,
+      };
+      return _currentUserProfile!;
+    } catch (e) {
+      print('Error fetching user profile: $e');
+      return {'custom_user_id': null, 'name': 'Unknown User'};
+    }
+  }
+
+
+
   Future<void> _fetchAndBroadcastUnreadCount() async {
     try {
       final count = await _client.rpc('get_unread_chat_rooms_count');
@@ -52,13 +87,13 @@ class ChatService {
     _messagesChannel = _client.channel('public:chat_messages');
     _messagesChannel!
         .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'chat_messages',
-          callback: (payload) {
-            _fetchAndBroadcastUnreadCount();
-          },
-        )
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'chat_messages',
+      callback: (payload) {
+        _fetchAndBroadcastUnreadCount();
+      },
+    )
         .subscribe();
     _fetchAndBroadcastUnreadCount();
   }
@@ -71,7 +106,12 @@ class ChatService {
     required String roomId,
     required String content,
   }) async {
-    final senderId = await getCurrentCustomUserId();
+    // --- 4. UPDATE THIS FUNCTION ---
+    final userProfile = await _getCurrentUserProfile();
+    final senderId = userProfile['custom_user_id'];
+    final senderName = userProfile['name'];
+
+
     if (senderId == null) {
       throw Exception("User is not logged in");
     }
@@ -82,6 +122,20 @@ class ChatService {
       'content': encryptedContent,
       'message_type': 'text',
     });
+
+    // --- 5. ADD THE EDGE FUNCTION CALL ---
+    try {
+      await _client.functions.invoke('send-chat-notification', body: {
+        'room_id': roomId,
+        'sender_id': senderId,
+        'sender_name': senderName ?? 'Unknown User', // Add null fallback
+        'message_content': content, // Send unencrypted content for the notification
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('Failed to send chat notification: $e');
+      }
+    }
   }
 
   // Updated: Uses the correct RPC 'authorize_attachment_upload'
@@ -91,7 +145,11 @@ class ChatService {
     required String fileName,
     String? caption,
   }) async {
-    final senderId = await getCurrentCustomUserId();
+    // --- 6. UPDATE THIS FUNCTION ---
+    final userProfile = await _getCurrentUserProfile();
+    final senderId = userProfile['custom_user_id'];
+    final senderName = userProfile['name'];
+
     if (senderId == null) throw Exception("User is not logged in");
 
     try {
@@ -108,25 +166,25 @@ class ChatService {
       final fileBytes = await file.readAsBytes();
 
       await _client.storage.from('chat_attachments').uploadBinary(
-            filePath,
-            fileBytes,
-            fileOptions: FileOptions(
-              contentType:
-                  lookupMimeType(fileName) ?? 'application/octet-stream',
-              upsert: false,
-            ),
-          );
+        filePath,
+        fileBytes,
+        fileOptions: FileOptions(
+          contentType:
+          lookupMimeType(fileName) ?? 'application/octet-stream',
+          upsert: false,
+        ),
+      );
 
       // 3. Get the public URL of the successfully uploaded file
       final publicUrl =
-          _client.storage.from('chat_attachments').getPublicUrl(filePath);
+      _client.storage.from('chat_attachments').getPublicUrl(filePath);
 
       // 4. Encrypt the caption or a placeholder text
       final String messageContent = caption != null && caption.isNotEmpty
           ? caption
           : 'Attachment: $fileName';
       final encryptedContent =
-          EncryptionService.encryptMessage(messageContent, roomId);
+      EncryptionService.encryptMessage(messageContent, roomId);
 
       // 5. Insert a new message into the database with the file URL
       await _client.from('chat_messages').insert({
@@ -136,6 +194,21 @@ class ChatService {
         'message_type': 'attachment',
         'attachment_url': publicUrl,
       });
+
+      // --- 7. ADD THE EDGE FUNCTION CALL (FOR ATTACHMENTS) ---
+      try {
+        await _client.functions.invoke('send-chat-notification', body: {
+          'room_id': roomId,
+          'sender_id': senderId,
+          'sender_name': senderName ?? 'Unknown User',
+          'message_content': messageContent, // Send the caption as the message
+        });
+      } catch (e) {
+        if (kDebugMode) {
+          print('Failed to send chat notification: $e');
+        }
+      }
+
     } catch (e) {
       print('Error sending attachment: $e');
       rethrow;
@@ -162,14 +235,23 @@ class ChatService {
   }
 
   Future<void> markRoomAsRead(String roomId) async {
-    final userId = await getCurrentCustomUserId();
+    // --- THIS IS THE FIX FOR THE CRASH ---
+    final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _client.from('chat_read_status').upsert({
-      'room_id': roomId,
-      'user_id': userId,
-      'last_read_at': DateTime.now().toIso8601String(),
-    });
-    _fetchAndBroadcastUnreadCount();
+    try {
+      await _client.rpc(
+        'upsert_chat_read_status',
+        params: {
+          'p_room_id': roomId,
+          'p_user_id': userId,
+        },
+      );
+      _fetchAndBroadcastUnreadCount();
+    } catch (e) {
+      // Log the error but don't crash the app
+      print('Failed to mark room as read: $e');
+    }
+    // --- END OF FIX ---
   }
 
   Stream<List<Map<String, dynamic>>> getMessagesStream(String roomId) {
@@ -202,17 +284,17 @@ class ChatService {
         .eq('room_id', roomId)
         .order('created_at')
         .asyncMap((messages) async {
-          final enrichedMessages = <Map<String, dynamic>>[];
-          for (final message in messages) {
-            final decryptedContent =
-                EncryptionService.decryptMessage(message['content'], roomId);
-            enrichedMessages.add({
-              ...message,
-              'content': decryptedContent,
-              'sender': await getProfile(message['sender_id']),
-            });
-          }
-          return enrichedMessages;
+      final enrichedMessages = <Map<String, dynamic>>[];
+      for (final message in messages) {
+        final decryptedContent =
+        EncryptionService.decryptMessage(message['content'], roomId);
+        enrichedMessages.add({
+          ...message,
+          'content': decryptedContent,
+          'sender': await getProfile(message['sender_id']),
         });
+      }
+      return enrichedMessages;
+    });
   }
 }

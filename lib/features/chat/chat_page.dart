@@ -66,7 +66,7 @@ class _ChatPageState extends State<ChatPage> {
             children: <Widget>[
               ListTile(
                 leading: const Icon(Icons.camera_alt),
-                title:  Text('take_photo_pod'.tr()),
+                title: Text('take_photo_pod'.tr()),
                 onTap: () {
                   Navigator.of(context).pop();
                   _handleCamera();
@@ -74,7 +74,7 @@ class _ChatPageState extends State<ChatPage> {
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library),
-                title:  Text('choose_gallery'.tr()),
+                title: Text('choose_gallery'.tr()),
                 onTap: () {
                   Navigator.of(context).pop();
                   _handleGallery();
@@ -162,7 +162,7 @@ class _ChatPageState extends State<ChatPage> {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return  Center(child: Text('no_messages'.tr()));
+                  return Center(child: Text('no_messages'.tr()));
                 }
 
                 final messages = snapshot.data!;
@@ -182,7 +182,7 @@ class _ChatPageState extends State<ChatPage> {
                     final timestamp = message['created_at'] as String?;
                     final messageType = message['message_type'] ?? 'text';
                     final attachmentUrl = message['attachment_url'];
-                    final content = message['content'];
+                    final content = message['content'] as String? ?? '';
 
                     if (messageType == 'attachment' && attachmentUrl != null) {
                       return _AttachmentBubble(
@@ -216,18 +216,8 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget _messageInputField() {
     return SafeArea(
-      child: Container(
+      child: Padding(
         padding: const EdgeInsets.all(12.0),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          boxShadow: [
-            BoxShadow(
-              offset: const Offset(0, -2),
-              blurRadius: 4,
-              color: Colors.black.withOpacity(0.05),
-            ),
-          ],
-        ),
         child: Row(
           children: [
             IconButton(
@@ -244,8 +234,20 @@ class _ChatPageState extends State<ChatPage> {
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: Colors.grey[200],
+                  fillColor: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey[850]
+                      : Colors.grey[200],
+                  hintStyle: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white70
+                        : Colors.black54,
+                  ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black,
                 ),
                 onSubmitted: (_) => _sendMessage(),
               ),
@@ -265,7 +267,9 @@ class _ChatPageState extends State<ChatPage> {
       ),
     );
   }
-}
+} // end of _ChatPageState
+
+// ----------------- helper widgets below (outside of _ChatPageState) -----------------
 
 class _MessageBubble extends StatelessWidget {
   final String message;
@@ -280,7 +284,8 @@ class _MessageBubble extends StatelessWidget {
     required this.senderName,
     required this.senderRole,
     this.timestamp,
-  });
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -299,15 +304,14 @@ class _MessageBubble extends StatelessWidget {
     }
 
     return Column(
-      crossAxisAlignment: isMine
-          ? CrossAxisAlignment.end
-          : CrossAxisAlignment.start,
+      crossAxisAlignment:
+      isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
         if (!isMine)
           Padding(
             padding: const EdgeInsets.only(left: 12, bottom: 4, top: 8),
             child: Text(
-              '$senderName ($displayRole)',
+              '$senderName (${displayRole})',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 12,
@@ -316,13 +320,13 @@ class _MessageBubble extends StatelessWidget {
             ),
           ),
         Row(
-          mainAxisAlignment: isMine
-              ? MainAxisAlignment.end
-              : MainAxisAlignment.start,
+          mainAxisAlignment:
+          isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
           children: [
             Flexible(
               child: Container(
-                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                margin:
+                const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                 padding: const EdgeInsets.symmetric(
                   vertical: 10,
                   horizontal: 14,
@@ -333,29 +337,25 @@ class _MessageBubble extends StatelessWidget {
                       : (isMine
                       ? Theme.of(context).colorScheme.primary
                       : Theme.of(context).colorScheme.secondary),
-
                   borderRadius: BorderRadius.only(
                     topLeft: const Radius.circular(16),
                     topRight: const Radius.circular(16),
-                    bottomLeft: isMine
-                        ? const Radius.circular(16)
-                        : Radius.zero,
-                    bottomRight: isMine
-                        ? Radius.zero
-                        : const Radius.circular(16),
+                    bottomLeft:
+                    isMine ? const Radius.circular(16) : Radius.zero,
+                    bottomRight:
+                    isMine ? Radius.zero : const Radius.circular(16),
                   ),
                 ),
                 child: Text(
                   message,
                   style: TextStyle(
                     color: Theme.of(context).brightness == Brightness.dark
-                        ? (isMine ? Colors.white : Colors.black) // dark mode fix
+                        ? (isMine ? Colors.white : Colors.black)
                         : (isMine
                         ? Theme.of(context).colorScheme.onPrimary
                         : Theme.of(context).colorScheme.onSecondary),
                   ),
                 ),
-
               ),
             ),
           ],
@@ -387,7 +387,8 @@ class _AttachmentBubble extends StatelessWidget {
     required this.senderName,
     required this.senderRole,
     this.timestamp,
-  });
+    Key? key,
+  }) : super(key: key);
 
   bool get _isImage {
     final lowerUrl = url.toLowerCase();
@@ -414,9 +415,8 @@ class _AttachmentBubble extends StatelessWidget {
     }
 
     return Column(
-      crossAxisAlignment: isMine
-          ? CrossAxisAlignment.end
-          : CrossAxisAlignment.start,
+      crossAxisAlignment:
+      isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
         if (!isMine)
           Padding(
@@ -442,7 +442,8 @@ class _AttachmentBubble extends StatelessWidget {
                 onTap: () async {
                   final uri = Uri.parse(url);
                   if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    await launchUrl(uri,
+                        mode: LaunchMode.externalApplication);
                   }
                 },
                 child: _isImage
@@ -469,7 +470,8 @@ class _AttachmentBubble extends StatelessWidget {
               ),
               if (caption.isNotEmpty && !caption.startsWith('Attachment:'))
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                  padding:
+                  const EdgeInsets.fromLTRB(12, 8, 12, 8),
                   child: Text(caption),
                 ),
             ],

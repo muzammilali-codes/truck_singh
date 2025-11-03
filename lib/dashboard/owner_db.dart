@@ -120,7 +120,7 @@ class _TruckOwnerDashboardState extends State<TruckOwnerDashboard> {
     } catch (e) {
       if (mounted) {
         setState(
-          () => _dashboardState = _dashboardState.copyWith(
+              () => _dashboardState = _dashboardState.copyWith(
             isLoading: false,
             error: e.toString(),
           ),
@@ -151,19 +151,19 @@ class _TruckOwnerDashboardState extends State<TruckOwnerDashboard> {
           : _dashboardState.error != null
           ? Center(child: Text('Error: ${_dashboardState.error}'))
           : RefreshIndicator(
-              onRefresh: _loadDashboardData,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    _buildPerformanceOverviewCard(),
-                    const SizedBox(height: 20),
-                    _buildFeatureGrid(),
-                  ],
-                ),
-              ),
-            ),
+        onRefresh: _loadDashboardData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              _buildPerformanceOverviewCard(),
+              const SizedBox(height: 20),
+              _buildFeatureGrid(),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -369,6 +369,93 @@ class _TruckOwnerDashboardState extends State<TruckOwnerDashboard> {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const BlankPage()),
+              ),
+            ),
+            FeatureCard(
+              title: 'myTrips'.tr(),
+              subtitle: 'historyDetails'.tr(),
+              icon: Icons.route_outlined,
+              color: Colors.blueGrey,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const BlankPage()),
+              ),
+            ),
+            FeatureCard(
+              title: 'ratings'.tr(),
+              subtitle: 'viewRatings'.tr(),
+              icon: Icons.star_outline,
+              color: Colors.orange,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const BlankPage()),
+              ),
+            ),
+            FeatureCard(
+              title: 'myDrivers'.tr(),
+              subtitle: 'addTrackDrivers'.tr(),
+              icon: Icons.people_outlined,
+              color: Colors.deepPurple,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const BlankPage()),
+              ),
+            ),
+            FeatureCard(
+              title: 'sharedtrips'.tr(),
+              subtitle: 'sharedtracking'.tr(),
+              icon: Icons.share_location,
+              color: Colors.orange,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BlankPage(),
+                ),
+              ),
+            ),
+            FeatureCard(
+              title: 'activeTrips'.tr(),
+              subtitle: 'monitorLiveLocations'.tr(),
+              icon: Icons.map_outlined,
+              color: Colors.orange,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const BlankPage()),
+              ),
+            ),
+            FeatureCard(
+              title: 'loadBoard'.tr(),
+              subtitle: 'browsePostLoads'.tr(),
+              icon: Icons.view_list_outlined,
+              color: Colors.blue,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) =>  const BlankPage(),
+                ),
+              ),
+            ),
+            FeatureCard(
+              title: 'createShipment'.tr(),
+              subtitle: 'postNewLoad'.tr(),
+              icon: Icons.add_box_rounded,
+              color: Colors.teal,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const BlankPage()),
+              ),
+            ),
+            FeatureCard(
+              title: 'findShipments'.tr(),
+              subtitle: 'availableLoads'.tr(),
+              icon: Icons.search_outlined,
+              color: Colors.teal,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:  (context) =>  const BlankPage(),
+                ),
               ),
             ),
           ],

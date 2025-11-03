@@ -1,3 +1,4 @@
+// File: lib/widgets/feature_card.dart
 import 'package:flutter/material.dart';
 
 class FeatureCard extends StatelessWidget {
@@ -34,7 +35,7 @@ class FeatureCard extends StatelessWidget {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(10),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -54,17 +55,18 @@ class FeatureCard extends StatelessWidget {
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
+
                 textAlign: TextAlign.center,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Flexible(
                 child: Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
                   textAlign: TextAlign.center,
-                  maxLines: 1,
+                  maxLines: 2,
                   softWrap: true,
                   overflow: TextOverflow.ellipsis,
                 ),
