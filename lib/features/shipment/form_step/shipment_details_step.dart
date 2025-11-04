@@ -61,14 +61,41 @@ class ShipmentDetailsStep extends StatelessWidget {
         const SizedBox(height: 10),
         _requiredTextField(itemController, "shippingItem"),
         const SizedBox(height: 16),
-        _requiredTextField(weightController, "weightTon", isNumeric: true),
+        _requiredTextField(weightController, "quantity", isNumeric: true),
         const SizedBox(height: 16),
-        _requiredTextField(unitController, "unit", isNumeric: true),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "unit".tr(),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+        ),
+        DropdownButtonFormField<String>(
+          value: unitController.text.isNotEmpty ? unitController.text : null,
+          decoration: InputDecoration(
+            hintText: "select Unit".tr(),
+            border: const OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(value: "ton", child: Text("ton")),
+            DropdownMenuItem(value: "kg", child: Text("kg")),
+            DropdownMenuItem(value: "pcs", child: Text("pcs")),
+            DropdownMenuItem(value: "pound", child: Text("pound")),
+          ],
+          onChanged: (value) {
+            if (value != null) {
+              unitController.text = value;
+              onChanged();
+            }
+          },
+          validator: (value) =>
+          value == null || value.isEmpty ? "select Unit".tr() : null,
+        ),
         const SizedBox(height: 20),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.amber.shade200),
           ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../config/theme.dart';
 import '../dashboard/widgets/feature_card.dart';
 import '../features/chat/agent_chat_list_page.dart';
 import '../features/driver_documents/driver_documents_page.dart';
@@ -16,8 +17,16 @@ import '../features/tracking/tracktruckspage.dart';
 import '../features/complains/mycomplain.dart';
 import '../features/blank.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../features/laod_assignment/presentation/cubits/shipment_cubit.dart';
+import '../features/laod_assignment/presentation/screen/load_assignment_screen.dart';
+import '../features/shipment/shipper_form_page.dart';
+import '../features/laod_assignment/presentation/screen/allLoads.dart';
+import '../features/trips/myTrips.dart';
+import 'package:logistics_toolkit/features/tracking/shared_shipments_page.dart';
+import '../features/ratings/presentation/screen/trip_ratings.dart';
+import 'package:logistics_toolkit/features/Report%20Analysis/report_chart.dart';
 
-// A simple model to hold the dashboard's state
 class DashboardState {
   final bool isLoading;
   final String? error;
@@ -64,7 +73,6 @@ class TruckOwnerService {
         .single();
   }
 
-  // Uses an RPC for efficient calculation of stats on the database
   Future<Map<String, int>> getDashboardStats(String ownerId) async {
     final stats = await _supabase.rpc(
       'get_owner_dashboard_stats'.tr(),
@@ -389,7 +397,7 @@ class _TruckOwnerDashboardState extends State<TruckOwnerDashboard> {
               color: Colors.orange,
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const BlankPage()),
+                MaterialPageRoute(builder: (context) => const TripRatingsPage()),
               ),
             ),
             FeatureCard(
@@ -399,7 +407,7 @@ class _TruckOwnerDashboardState extends State<TruckOwnerDashboard> {
               color: Colors.deepPurple,
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const BlankPage()),
+                MaterialPageRoute(builder: (context) => const MyDriverPage()),
               ),
             ),
             FeatureCard(
@@ -410,7 +418,7 @@ class _TruckOwnerDashboardState extends State<TruckOwnerDashboard> {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const BlankPage(),
+                  builder: (context) => const SharedShipmentsPage(),
                 ),
               ),
             ),
@@ -421,7 +429,7 @@ class _TruckOwnerDashboardState extends State<TruckOwnerDashboard> {
               color: Colors.orange,
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const BlankPage()),
+                MaterialPageRoute(builder: (context) => const MyShipments()),
               ),
             ),
             FeatureCard(
@@ -432,8 +440,10 @@ class _TruckOwnerDashboardState extends State<TruckOwnerDashboard> {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder:
-                      (context) =>  const BlankPage(),
+                  builder: (_) => BlocProvider(
+                    create: (context) => ShipmentCubit(),
+                    child: const allLoadsPage(),
+                  ),
                 ),
               ),
             ),
@@ -444,7 +454,7 @@ class _TruckOwnerDashboardState extends State<TruckOwnerDashboard> {
               color: Colors.teal,
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const BlankPage()),
+                MaterialPageRoute(builder: (context) => const ShipperFormPage()),
               ),
             ),
             FeatureCard(
@@ -455,7 +465,10 @@ class _TruckOwnerDashboardState extends State<TruckOwnerDashboard> {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder:  (context) =>  const BlankPage(),
+                  builder: (_) => BlocProvider(
+                    create: (context) => ShipmentCubit(),
+                    child: const LoadAssignmentScreen(),
+                  ),
                 ),
               ),
             ),
@@ -466,49 +479,26 @@ class _TruckOwnerDashboardState extends State<TruckOwnerDashboard> {
   }
   Widget _buildBottomAppBar() {
     return BottomAppBar(
-      elevation: 0, // ✅ remove appbar shadow, match screenshot
-      color: Colors.transparent, // ✅ transparent background
+      elevation: 10.0,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-
-        child: GestureDetector(
-          onTap: () {
+        child: ElevatedButton.icon(
+          onPressed: () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const BlankPage(), // ✅ blank page navigation
+                builder: (_) => const ReportAnalysisPage(),
               ),
             );
           },
-
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.orange, // ✅ your orange button
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.analytics_outlined, color: Colors.white),
-
-                const SizedBox(width: 8),
-
-                Flexible(
-                  child: Text(
-                    'viewreport&analysis'.tr(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
+          icon: const Icon(Icons.analytics_outlined),
+          label: Text('viewreport&analysis'.tr()),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            backgroundColor: AppColors.orange,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.0),
             ),
           ),
         ),
