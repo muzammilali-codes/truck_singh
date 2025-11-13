@@ -17,7 +17,6 @@ class _LoadAssignmentScreenState extends State<LoadAssignmentScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      // Provide the Cubit to the widget tree and fetch shipments immediately.
       create: (context) => ShipmentCubit()..fetchAvailableShipments(),
       child: Scaffold(
         appBar: AppBar(
@@ -46,21 +45,22 @@ class _LoadAssignmentScreenState extends State<LoadAssignmentScreen> {
             ),
           ),
         ),
-        // BlocConsumer listens for state changes to show SnackBars and rebuilds the UI.
-        body: BlocConsumer<ShipmentCubit, ShipmentState>(
-          listener: (context, state) {
-            if (state.status == ShipmentStatus.failure && state.errorMessage != null) {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(content: Text(state.errorMessage!)));
-            }
-          },
-          builder: (context, state) {
-            return RefreshIndicator(
-              onRefresh: () => context.read<ShipmentCubit>().fetchAvailableShipments(),
-              child: _buildBody(context, state),
-            );
-          },
+        body: SafeArea(
+          child: BlocConsumer<ShipmentCubit, ShipmentState>(
+            listener: (context, state) {
+              if (state.status == ShipmentStatus.failure && state.errorMessage != null) {
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+              }
+            },
+            builder: (context, state) {
+              return RefreshIndicator(
+                onRefresh: () => context.read<ShipmentCubit>().fetchAvailableShipments(),
+                child: _buildBody(context, state),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -71,7 +71,7 @@ class _LoadAssignmentScreenState extends State<LoadAssignmentScreen> {
       case ShipmentStatus.loading:
         return const Center(child: CircularProgressIndicator());
       case ShipmentStatus.failure:
-        // Show error only if there's no data to display
+      // Show error only if there's no data to display
         if (state.shipments.isEmpty) {
           return Center(child: Text(state.errorMessage ?? 'unknown_error'.tr()));
         }

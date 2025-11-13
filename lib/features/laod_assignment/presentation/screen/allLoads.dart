@@ -52,9 +52,9 @@ class _allLoadsPageState extends State<allLoadsPage>
   }
 
   Future<void> assignDriverToShipment(
-    String shipmentId,
-    String driverUserId,
-  ) async {
+      String shipmentId,
+      String driverUserId,
+      ) async {
     try {
       await ShipmentService.assignDriver(
         shipmentId: shipmentId,
@@ -77,9 +77,9 @@ class _allLoadsPageState extends State<allLoadsPage>
 
   // New: Logic to handle truck assignment
   Future<void> assignTruckToShipment(
-    String shipmentId,
-    String truckNumber,
-  ) async {
+      String shipmentId,
+      String truckNumber,
+      ) async {
     try {
       await ShipmentService.assignTruck(
         shipmentId: shipmentId,
@@ -204,19 +204,21 @@ class _allLoadsPageState extends State<allLoadsPage>
           ),
         ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                RefreshIndicator(
-                  onRefresh: _fetchShipments,
-                  child: _buildShipmentList('pending'),
-                ),
-                _buildShipmentList('assigned'),
-                _buildShipmentList('completed'),
-              ],
+      body: SafeArea(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : TabBarView(
+          controller: _tabController,
+          children: [
+            RefreshIndicator(
+              onRefresh: _fetchShipments,
+              child: _buildShipmentList('pending'),
             ),
+            _buildShipmentList('assigned'),
+            _buildShipmentList('completed'),
+          ],
+        ),
+      ),
     );
   }
 
@@ -482,9 +484,9 @@ class _allLoadsPageState extends State<allLoadsPage>
                   : Icons.swap_horiz,
             ),
             label: Text(
-              trip['assigned_driver'] == null
-                  ? 'assign_driver'.tr()
-                  : 'change_driver'.tr()
+                trip['assigned_driver'] == null
+                    ? 'assign_driver'.tr()
+                    : 'change_driver'.tr()
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: trip['assigned_driver'] == null
@@ -519,11 +521,11 @@ class _allLoadsPageState extends State<allLoadsPage>
   }
 
   Widget _buildLocationRow(
-    IconData icon,
-    String label,
-    String location,
-    Color color,
-  ) {
+      IconData icon,
+      String label,
+      String location,
+      Color color,
+      ) {
     return Row(
       children: [
         Icon(icon, color: color, size: 20),
@@ -536,7 +538,6 @@ class _allLoadsPageState extends State<allLoadsPage>
                 label,
                 style: const TextStyle(
                   fontSize: 12,
-                  //color: Colors.grey,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -571,7 +572,6 @@ class _allLoadsPageState extends State<allLoadsPage>
               text,
               style: TextStyle(
                 fontSize: 12,
-                //color: Colors.grey.shade700,
                 fontWeight: FontWeight.w500,
               ),
               overflow: TextOverflow.ellipsis,

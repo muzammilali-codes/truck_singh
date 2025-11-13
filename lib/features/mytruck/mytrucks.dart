@@ -520,8 +520,8 @@ class _AddTruckPageState extends State<AddTruckPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('add_new_truck'.tr())),
-      body: _buildForm(),
-      bottomNavigationBar: _buildSubmitButton(),
+      bottomNavigationBar:  _buildSubmitButton(),
+      body:  SafeArea(child: _buildForm()),
     );
   }
 
@@ -627,23 +627,25 @@ class _AddTruckPageState extends State<AddTruckPage> {
   }
 
   Widget _buildSubmitButton() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: ElevatedButton(
-        onPressed: _isSubmitting ? null : _submitForm,
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-        ),
-        child: _isSubmitting
-            ? const SizedBox(
-          height: 20,
-          width: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Colors.white,
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ElevatedButton(
+          onPressed: _isSubmitting ? null : _submitForm,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
           ),
-        )
-            : Text('add_truck'.tr()),
+          child: _isSubmitting
+              ? const SizedBox(
+            height: 20,
+            width: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          )
+              : Text('add_truck'.tr()),
+        ),
       ),
     );
   }
@@ -878,23 +880,25 @@ class _EditTruckPageState extends State<EditTruckPage> {
   }
 
   Widget _buildSubmitButton() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: ElevatedButton(
-        onPressed: _isSubmitting ? null : _submitForm,
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-        ),
-        child: _isSubmitting
-            ? const SizedBox(
-          height: 20,
-          width: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Colors.white,
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ElevatedButton(
+          onPressed: _isSubmitting ? null : _submitForm,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
           ),
-        )
-            : Text('update_truck'.tr()),
+          child: _isSubmitting
+              ? const SizedBox(
+            height: 20,
+            width: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          )
+              : Text('update_truck'.tr()),
+        ),
       ),
     );
   }
