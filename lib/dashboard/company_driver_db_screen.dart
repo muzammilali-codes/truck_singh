@@ -21,6 +21,9 @@ import '../services/onesignal_notification_service.dart';
 import '../features/auth/services/supabase_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 
+import '../widgets/chat_screen.dart';
+import '../widgets/floating_chat_control.dart';
+
 class CompanyDriverDb extends StatefulWidget {
   const CompanyDriverDb({Key? key}) : super(key: key);
 
@@ -307,7 +310,8 @@ class _CompanyDriverDbState extends State<CompanyDriverDb> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(),
-      body: SafeArea(
+      body: Stack(
+        children: [ SafeArea(
         child: RefreshIndicator(
           onRefresh: _handleRefresh,
           child: Padding(
@@ -478,10 +482,41 @@ class _CompanyDriverDbState extends State<CompanyDriverDb> {
                 );
               },
             ),
+
+
           ),
+
+
         ),
+
+
       ),
-    );
+          Positioned(
+            bottom: 20,
+            right: 20,
+            child: FloatingChatControl(
+              onOpenChat: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ChatScreen(
+                      onNavigate: (routeName) {
+                        Navigator.of(context).pushNamed('/$routeName');
+                      },
+                    ),
+                  ),
+                );
+              },
+              listening: false,
+            ),
+          ),
+        ],
+      ),
+
+
+
+
+      );
+
   }
 
   Widget _buildCurrentTripCard() {

@@ -80,7 +80,7 @@ class MyApp extends StatelessWidget {
                     const RootPage(),
 
                     // ye yhan add kr dia hai home me
-                    FloatingChatControl(
+             /*       FloatingChatControl(
                       onOpenChat: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -95,7 +95,7 @@ class MyApp extends StatelessWidget {
                       listening: false,
 
 
-                    )
+                    )*/
                   ],
                 );
               }

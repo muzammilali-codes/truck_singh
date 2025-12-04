@@ -19,6 +19,9 @@ import '../services/onesignal_notification_service.dart';
 import '../features/auth/services/supabase_service.dart';
 import 'package:easy_localization/easy_localization.dart';
 
+import '../widgets/chat_screen.dart';
+import '../widgets/floating_chat_control.dart';
+
 class CompanyDriverDb extends StatefulWidget {
   const CompanyDriverDb({super.key});
   @override
@@ -259,24 +262,48 @@ class _CompanyDriverDbState extends State<CompanyDriverDb> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _handleRefresh,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildCurrentTripCard(),
-                const SizedBox(height: 20),
-                _buildFeatureGrid(),
-              ],
+      body: Stack(
+        children: [
+          SafeArea(
+            child: RefreshIndicator(
+              onRefresh: _handleRefresh,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildCurrentTripCard(),
+                    const SizedBox(height: 20),
+                    _buildFeatureGrid(),
+                    const SizedBox(height: 80), // Prevents content from being hidden under the floating button
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
+          Positioned(
+            bottom: 20,
+            right: 20,
+            child: FloatingChatControl(
+              onOpenChat: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ChatScreen(
+                      onNavigate: (routeName) {
+                        Navigator.of(context).pushNamed('/$routeName');
+                      },
+                    ),
+                  ),
+                );
+              },
+              listening: false,
+            ),
+          ),
+        ],
       ),
     );
   }
+
 
   Widget _buildCurrentTripCard() {
     if (_isShipmentLoading) {
